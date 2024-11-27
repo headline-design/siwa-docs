@@ -1,75 +1,60 @@
 ---
 description: >-
-  This documentation outlines the steps to integrate Defly Wallet for signing
-  "Sign In With Algorand" (SIWA) messages.
+  This guide explains how to integrate Lute wallet with Sign-In with Algorand
+  (SIWA) for transaction signing.
 ---
 
-# Defly Wallet
+# Lute Wallet
 
 {% embed url="https://github.com/headline-design/siwa-connect" %}
-Get started quickly w/ SIWA Connect
+Get started quickly with SIWA Connect
 {% endembed %}
 
 ### Prerequisites
 
-1.  Install the Defly Wallet library:
-
-    ```bash
-    npm install @blockshake/defly-connect
-    ```
-2.  Import required modules:
-
-    ```javascript
-    import { DeflyWalletConnect } from "@blockshake/defly-connect";
-    import algosdk from "algosdk";
-    import { getMessageBytes, hashMessage, initializeAlgodClient } from "@/utils/siwaUtils";
-    ```
+1. Install the Lute wallet extension on Chrome
+2. Install the lute-connect NPM package
 
 ### Overview
 
-Defly wallet uses a transaction-based approach for signing SIWA messages, similar to Lute wallet. Here's how it works:
+Lute wallet uses a transaction-based approach for signing SIWA messages. Here's how it works:
 
 1. Create a zero-amount payment transaction
 2. Set the transaction's note field to the encoded SIWA message
-3. Sign the transaction using Defly wallet
+3. Sign the transaction using Lute wallet
 4. Extract the signature from the signed transaction
 
 ### Implementation
 
-#### 1. Connecting to Defly Wallet
+#### 1. Connecting to Lute Wallet
 
-To connect to Defly wallet, use the `DeflyWalletConnect` class:
+To connect to Lute wallet, use the `LuteConnect` class:
 
 ```javascript
-import { DeflyWalletConnect } from "@blockshake/defly-connect";
+import LuteConnect from "lute-connect";
 
-const deflyWallet = new DeflyWalletConnect();
+const luteWallet = new LuteConnect("SIWA Connect");
 
-const connectWallet = async () => {
-  try {
-    const newAccounts = await deflyWallet.connect();
-    deflyWallet.connector?.on("disconnect", handleDisconnect);
-    return newAccounts[0];
-  } catch (error) {
-    console.error("Error connecting to Defly wallet:", error);
-    throw error;
-  }
+const connectLute = async () => {
+  const genesis = await algodClient.genesis().do();
+  const genesisID = `${genesis.network}-${genesis.id}`;
+  const addresses = await luteWallet.connect(genesisID);
+  return addresses[0];
 };
 ```
 
 #### 2. Signing a SIWA Message
 
-To sign a SIWA message with Defly wallet:
+To sign a SIWA message with Lute wallet:
 
 1. Create a payment transaction with the SIWA message in the note field
-2. Sign the transaction using Defly wallet
+2. Sign the transaction using Lute wallet
 3. Extract the signature from the signed transaction
 
 Here's the code to accomplish this:
 
 ```javascript
 import algosdk from "algosdk";
-import { hashMessage, getMessageBytes } from "@/utils/siwaUtils";
 
 const signMessage = async (message: string) => {
   if (!address) {
@@ -81,40 +66,42 @@ const signMessage = async (message: string) => {
 
   const suggestedParams = await algodClient.getTransactionParams().do();
 
-  const deflyTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+  const luteTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     note: encodedHashedMessage,
     from: address,
     to: address,
     amount: 0,
     suggestedParams,
-  } as any);
+  });
 
-  const deflyTxnGroup = [{ txn: deflyTxn, signerAddress: [address] }];
-  const deflySigArray = await deflyWallet.signTransaction([deflyTxnGroup]);
-  const decodedDeflyTxn = algosdk.decodeSignedTransaction(deflySigArray[0]);
+  const luteSigArray = await luteWallet.signTxns([
+    { txn: Buffer.from(algosdk.encodeUnsignedTransaction(luteTxn)).toString("base64") },
+  ]);
+
+  const decodedLuteTxn = algosdk.decodeSignedTransaction(luteSigArray[0]);
 
   return {
-    signature: decodedDeflyTxn.sig as unknown as Uint8Array,
-    transaction: deflySigArray[0],
+    signature: decodedLuteTxn.sig as unknown as Uint8Array,
+    transaction: luteSigArray[0],
   };
 };
 ```
 
 ### Verification
 
-When verifying the SIWA message signature for Defly wallet, the process is similar to Lute wallet due to the transaction-based approach. Here's how it works:
+When verifying the SIWA message signature for Lute wallet, the process is more complex due to the transaction-based approach. Here's how it works:
 
 1. The verification function receives the following parameters:
-2. `message`: The original SIWA message
-3. `signature`: The signature in base64 format
-4. `provider`: The wallet provider (in this case, "Defly")
-5. `encodedTransaction`: The encoded transaction in Base64 format
-6. The verification process for Defly wallet:
+   * `message`: The original SIWA message
+   * `signature`: The signature in base64 format
+   * `provider`: The wallet provider (in this case, "Lute")
+   * `encodedTransaction`: The encoded transaction in Base64 format
+2. The verification process for Lute wallet:
 
 ```javascript
-if (provider === "Defly") {
+if (provider === "Lute") {
   if (!encodedTransaction) {
-    return false; // Defly requires an encoded transaction
+    return false; // Lute requires an encoded transaction
   }
 
   try {

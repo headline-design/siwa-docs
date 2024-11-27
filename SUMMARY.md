@@ -15,6 +15,8 @@
 * [NextAuth.js](integrations/nextauth.js.md)
 * [Pera Wallet](integrations/pera-wallet.md)
 * [Defly Wallet](integrations/defly-wallet.md)
+* [Kibisis Wallet](integrations/kibisis-wallet.md)
+* [Lute Wallet](integrations/lute-wallet.md)
 
 ## General Information
 
