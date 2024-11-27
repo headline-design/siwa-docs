@@ -1,9 +1,13 @@
 ---
-description: 'EIP-4361-COMPAT: Sign-In with Algorand'
 icon: key-skeleton-left-right
+description: 'EIP-4361-COMPAT: Sign-In with Algorand'
 ---
 
 # EIP-4361-COMPAT
+
+{% hint style="info" %}
+This document lays out SIWA's approach to adopting an authentication standard for Algorand, based on Ethereum's EIP-4361. This may be replaced with a formal ARC in the future.
+{% endhint %}
 
 ### Abstract
 
@@ -84,44 +88,7 @@ Resources:
 
 ### Signing and Verifying with Algorand Accounts
 
-For Algorand accounts, the verification method specified in the Algorand SDK MUST be used. This involves using the `algosdk.verify` function to check the signature against the message and the Algorand address.
-
-### Deriving Ethereum-Compatible Addresses
-
-To maintain compatibility with existing Ethereum-based systems, we derive an Ethereum-compatible address from the Algorand public key. This process involves:
-
-1. Taking the 32-byte public key of the Algorand account.
-2. Hashing this public key using Keccak-256.
-3. Taking the last 20 bytes of the resulting hash.
-4. Prefixing with '0x' to create a 42-character Ethereum-style address.
-
-Here's a code snippet demonstrating this process \[^1]:
-
-```python
-import hashlib
-from algosdk import account, encoding
-
-def algorand_to_ethereum_address(algorand_address):
-    # Decode the Algorand address to get the public key
-    public_key = encoding.decode_address(algorand_address)
-    
-    # Hash the public key using Keccak-256
-    keccak = hashlib.sha3_256()
-    keccak.update(public_key)
-    hash_result = keccak.digest()
-    
-    # Take the last 20 bytes and prefix with '0x'
-    ethereum_address = '0x' + hash_result[-20:].hex()
-    
-    return ethereum_address
-
-# Example usage
-algorand_address = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-eth_address = algorand_to_ethereum_address(algorand_address)
-print(f"Derived Ethereum-compatible address: {eth_address}")
-```
-
-This derived Ethereum-compatible address can be used in systems that expect an Ethereum address, allowing for easier integration with existing infrastructure.
+For Algorand accounts, the verification method specified in the Algorand SDK MUST be used. This involves using the `algosdk.verifyBytes` function to check the signature against the message and the Algorand address.
 
 ### Server-Side (Relying Party) Implementer Guidelines
 
