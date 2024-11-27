@@ -1,5 +1,5 @@
 ---
-description: Your Algorand keys, your auth
+description: Unified Algorand auth
 ---
 
 # Sign-In with Algorand
