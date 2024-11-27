@@ -1,7 +1,5 @@
 # Sign-in Diagram
 
-
-
 ```mermaid
 graph TD
     A["Start"] --> B["Connect Wallet"]
@@ -11,12 +9,15 @@ graph TD
     E --> B
     D --> F["Sign Message with Wallet"]
     F --> G{"Message Signed?"}
-    G -->|Yes| H["Verify Signature"]
+    G -->|Yes| H{"Provider Type?"}
     G -->|No| I["Display Error"]
     I --> F
-    H --> J{"Signature Valid?"}
-    J -->|Yes| K["Authentication Successful"]
-    J -->|No| L["Display Error"]
-    L --> B
-    K --> M["End"]
+    H -->|Pera/Kibisis| J["verifyBytes"]
+    H -->|Defly/Lute| K["verifyTransaction"]
+    J --> L{"Signature Valid?"}
+    K --> L
+    L -->|Yes| M["Authentication Successful"]
+    L -->|No| N["Display Error"]
+    N --> B
+    M --> O["End"]
 ```

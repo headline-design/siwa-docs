@@ -6,78 +6,85 @@ description: >-
 
 # Component Overview
 
-#### SIWAConnect Component Overview
-
 The `SIWAConnect` component is a React component designed to manage the authentication flow using Sign-In With Algo. It leverages several hooks and state variables for its functionality. Below is a brief overview of its core components:
 
 * **Hooks:**
   * `useWalletConnection()`: Provides necessary functions and state variables for wallet connectivity, such as connecting/disconnecting wallets, loading states, and signing messages.
   * `useSIWAAccount()`: Accepts `address` and returns account-related information, specifically the `address`.
-*   **State Variables:**
+* **State Variables:**
+  * **signedMessage**: Stores the message signed by the user.
+  * **pendingProvider**: Tracks the wallet provider waiting for user interaction.
+  * **fullSigningMessage**: Holds the comprehensive signing message object.
+  * **credentials**: Stores user credentials after successful authentication.
+  * **error**: Captures error information if any issues occur during the authentication flow.
+  * **verificationResult**: Maintains the result of the SIWA message verification process.
+  * **siwaMessageInstance**: Stores an instance of the `SiwaMessage`.
+  * **activeStep**: Keeps track of the current step in the authentication process.
 
-    * **signedMessage**: Stores the message signed by the user.
-    * **pendingProvider**: Tracks the wallet provider waiting for user interaction.
-    * **fullSigningMessage**: Holds the comprehensive signing message object.
-    * **credentials**: Stores user credentials after successful authentication.
-    * **error**: Captures error information if any issues occur during the authentication flow.
-    * **verificationResult**: Maintains the result of the SIWA message verification process.
-    * **siwaMessageInstance**: Stores an instance of the `SiwaMessage`.
-    * **activeStep**: Keeps track of the current step in the authentication process.
+**Key Functions**
 
+The component implements several key functions:
 
+1. `handleConnectWallet`: Connects to the selected wallet provider
+2. `handleDisconnect`: Disconnects the current wallet
+3. `signIn`: Creates and signs a SIWA message
+4. `verifySIWAMessage`: Verifies the signed SIWA message
 
-    #### Key Functions
-
-    The component powers various essential functions that facilitate the authentication process:
-
-    * **handleConnectWallet**: Initiates the connection to the chosen wallet provider.
-    * **signIn**: Generates and signs a SIWA message to authenticate the user.
-    * **verifySIWAMessage**: Ensures the authenticity of the signed SIWA message, verifying its validity and integrity.
-
-```typescript
-import React, { useState, useEffect } from "react";
-import { SiwaMessage } from "@avmkit/siwa";
-import useSIWAAccount from "@/hooks/useSIWAAccount";
-import { useWalletConnection, WalletProvider } from "@/hooks/useWalletConnection";
-import { uint8ArrayToBase64 } from "@/utils/siwaUtils";
-// ... other imports
-```
-
-2. The component uses several hooks and state variables to manage the authentication flow:
+Here's an example of the `signIn` function:
 
 ```typescript
-export default function SIWAConnect() {
-  const {
-    address,
-    provider,
-    isLoading,
-    connectWallet,
-    disconnectWallet,
-    signMessage,
-  } = useWalletConnection();
+const signIn = async () => {
+  if (!address) {
+    setError(new Error("No address connected"));
+    return;
+  }
 
-  const [signedMessage, setSignedMessage] = useState<string | null>(null);
-  const [pendingProvider, setPendingProvider] = useState<WalletProvider | null>(null);
-  const [fullSigningMessage, setFullSigningMessage] = useState<any | null>(null);
-  const [credentials, setCredentials] = useState<any | null>(null);
-  const [error, setError] = useState<any | null>(null);
-  const [verificationResult, setVerificationResult] = useState<any | null>(null);
-  const [siwaMessageInstance, setSiwaMessageInstance] = useState<SiwaMessage | null>(null);
-  const [activeStep, setActiveStep] = useState(0);
+  setError(null);
+  setSigning(true);
+  try {
+    const uri = typeof window !== "undefined" ? window.location.origin : "";
+    const domain = typeof window !== "undefined" ? window.location.host : "";
 
-  const { address } = useSIWAAccount(address || "");
+    const siwaMessage = new SiwaMessage({
+      domain,
+      address,
+      statement: "Sign in with Algorand to the app.",
+      uri,
+      version: "1",
+      chainId: 416001,
+      nonce: "randomNonce123", // In production, use a secure random nonce
+    });
 
-  // ... rest of the component
-}
+    setSiwaMessageInstance(siwaMessage);
+    setFullSigningMessage(siwaMessage);
+
+    const messageToSign = siwaMessage.prepareMessage();
+    const { signature, transaction: encodedTransaction } = await signMessage(messageToSign);
+
+    const algoSig = uint8ArrayToBase64(signature);
+
+    setCredentials({
+      message: JSON.stringify(siwaMessage),
+      encodedTransaction: encodedTransaction || null,
+      provider: provider || null,
+      signature: algoSig,
+      address: address,
+    });
+
+    setSignedMessage(Buffer.from(signature).toString("base64"));
+    setActiveStep(2);
+    setSigning(false);
+  } catch (error) {
+    console.error("Error signing message:", error);
+    setError(error);
+    setSigning(false);
+  }
+};
 ```
 
-3. The component implements several key functions:
+### UI Rendering
 
-* `handleConnectWallet`: Connects to the selected wallet provider
-* `signIn`: Creates and signs a SIWA message
-* `verifySIWAMessage`: Verifies the signed SIWA message
-
-4. The UI is rendered based on the current `activeStep`:
+The UI is rendered based on the current `activeStep`. Here's the complete `renderStep` function:
 
 ```typescript
 const renderStep = () => {
@@ -86,26 +93,65 @@ const renderStep = () => {
       return (
         <div className="space-y-4">
           <PeraConnectButton
-            isLoading={isLoading && pendingProvider === "PeraWallet"}
-            onConnect={() => handleConnectWallet("PeraWallet")}
+            isLoading={isLoading && pendingProvider === "Pera"}
+            onConnect={() => handleConnectWallet("Pera")}
           />
           <DeflyConnectButton
             onConnect={() => handleConnectWallet("Defly")}
             isLoading={isLoading && pendingProvider === "Defly"}
+          />
+          <KibisisConnectButton
+            isLoading={isLoading && pendingProvider === "Kibisis"}
+            onConnect={() => handleConnectWallet("Kibisis")}
+          />
+          <LuteConnectButton
+            onConnect={() => handleConnectWallet("Lute")}
+            isLoading={isLoading && pendingProvider === "Lute"}
           />
         </div>
       );
     case 1:
       return (
         <div>
-          <Button onClick={signIn} disabled={isLoading}>
-            {isLoading ? <LoadingSpinner /> : "Sign In"}
+          <Button className="h-12 w-full" onClick={signIn} disabled={signing}>
+            {signing ? <LoadingSpinner /> : "Sign In"}
           </Button>
         </div>
       );
-    // ... cases for steps 2 and 3
+    case 2:
+      return (
+        <div>
+          <Button
+            className="h-12 w-full"
+            onClick={verifySIWAMessage}
+            disabled={isLoading}
+          >
+            {isLoading ? <LoadingSpinner /> : "Verify SIWA Message"}
+          </Button>
+        </div>
+      );
+    case 3:
+      return (
+        <Alert variant="success">
+          <p className="font-semibold">Verification Successful</p>
+          <p>You have successfully signed in with Algorand.</p>
+        </Alert>
+      );
+    default:
+      return null;
   }
 };
 ```
+
+This function renders different UI elements based on the current step of the SIWA process:
+
+1. Display connect buttons for all supported wallets (Pera, Defly, Kibisis, and Lute)
+2. Show the "Sign In" button
+3. Show the "Verify SIWA Message" button
+4. Display a success message
+
+The component also includes additional UI elements for displaying the connected wallet information, error messages, and JSON representations of the signing message, credentials, and verification result.
+
+In the next section, we'll look at how to customize the UI of the SIWA Connect component to fit your application's design.
 
 In the next section, we'll look at how to customize the UI of the SIWA Connect component.

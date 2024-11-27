@@ -1,7 +1,8 @@
 ---
 description: >-
-  In a full-stack implementation of "Sign In With Algorand" (SIWA), message
-  verification should be handled securely on the server.
+  This guide explains how to implement server-side verification for Sign-In with
+  Algorand (SIWA) messages. The server-side verification is crucial for
+  maintaining security and integrity.
 ---
 
 # Server-side operations
@@ -12,85 +13,13 @@ The SIWA Connect template executes message validation on the client for demonstr
 
 ***
 
-### Server-Side Verification Overview
+### Verifying SIWA Messages
 
-The SIWA Connect client-side template includes the following logic for verifying a signed message:
-
-```javascript
-/**
- * Verify the SIWA message
- */
-const verifySIWAMessage = async () => {
-  if (!siwaMessageInstance || !signedMessage) {
-    setError(new Error("No signed message to verify"));
-    return;
-  }
-
-  setError(null);
-  try {
-    const siwaMessage = new SiwaMessage(
-      JSON.parse(credentials?.message || "{}")
-    );
-
-    const verifyParams = {
-      signature: credentials.signature,
-      domain: window.location.host,
-      address: address || undefined,
-      address: address || undefined,
-      signature: credentials.signature,
-    };
-
-    const result = await siwaMessage.verify(verifyParams);
-    setVerificationResult(result);
-
-    if (result.success) {
-      console.log("Signature verified successfully");
-      setActiveStep(3);
-    } else {
-      throw result.error || new Error("Error verifying SIWA signature");
-    }
-  } catch (error) {
-    console.error("Error verifying SIWA message:", error);
-    setError(error);
-  }
-};
-```
-
-In a full-stack environment, **message verification must occur on the server** to prevent tampering and ensure security.
-
-***
-
-### Setting Up Server-Side Verification
-
-#### Using the SIWA Verify Method
-
-The `SiwaMessage.verify` function is the core of server-side verification. It validates the following:
-
-* The message's integrity (Grammar API compliance).
-* The authenticity of the Algorand address and signature.
-* All required parameters in the credentials object.
-
-**Verify Method Signature**
+Here's an example implementation of server-side SIWA message verification in a Node.js environment:
 
 ```typescript
-(method) SiwaMessage.verify(params: VerifyParams, opts?: VerifyOpts): Promise<SiwaResponse>
-```
-
-**Parameters:**
-
-* `params` (required): Contains the message, signature, domain, and other verification parameters.
-* `opts` (optional): Additional options for the verification process.
-
-**Returns:**
-
-* A `SiwaResponse` object indicating the verification result.
-
-#### Server Implementation Example
-
-Here is an example implementation in a Node.js environment:
-
-```javascript
-import { SiwaMessage } from "@siwa/connect";
+import { SiwaMessage } from "@avmkit/siwa";
+import { verifySignature } from "./utils";
 
 /**
  * Verifies the SIWA message on the server
@@ -100,41 +29,37 @@ import { SiwaMessage } from "@siwa/connect";
 const verifySIWAMessageOnServer = async (payload) => {
   try {
     // Extract message and credentials from the payload
-    const { message, signature, address, signature } = payload;
+    const { message, signature, address, provider, encodedTransaction, nfd } = payload;
 
     // Initialize the SiwaMessage instance
     const siwaMessageInstance = new SiwaMessage(JSON.parse(message));
 
-    // Define the parameters for verification
-    const verifyParams = {
-      signature: signature,
-      domain: "yourdomain.com", // Replace with your app's domain
-      address: address,
-    };
-
     // Perform the verification
-    const result = await siwaMessageInstance.verify(verifyParams);
+    const isValid = await verifySignature(
+      siwaMessageInstance,
+      signature,
+      provider,
+      encodedTransaction,
+      nfd
+    );
 
-    if (result.success) {
+    if (isValid) {
       console.log("SIWA message verified successfully");
-      return { success: true, user: result.payload }; // Attach verified user data
+      return { success: true, user: { address, provider } }; // Attach verified user data
     } else {
-      throw result.error || new Error("Failed to verify SIWA message");
+      throw new Error("Failed to verify SIWA message");
     }
   } catch (error) {
     console.error("Verification error:", error);
     return { success: false, error: error.message };
   }
-};
 ```
 
-#### Integration in an API Endpoint
+### Integration in an API Endpoint
 
-To integrate this into your backend API, create an endpoint to handle SIWA verification requests:
+To integrate this into your backend API, create an endpoint to handle SIWA verification requests. Here's an example using Express.js:
 
-**Example with Express.js**
-
-```javascript
+```typescript
 import express from "express";
 import { verifySIWAMessageOnServer } from "./siwaVerification";
 
@@ -158,13 +83,61 @@ app.listen(PORT, () => {
 });
 ```
 
-***
+### Client-side Verification for Demonstration
 
-### Key Points to Remember
+While server-side verification is crucial for security in production environments, the SIWA Connect demo implements client-side verification for demonstration purposes. This allows users to see the entire process, including verification, without the need for a backend server.
 
-1. **Server-Side Security:** Always perform message verification on the server to maintain the integrity of authentication.
-2. **SIWA Verify Method:** Leverage the `SiwaMessage.verify` method to ensure compliance with Algorand’s signature verification and credentials validation.
-3. **Error Handling:** Implement robust error handling to provide meaningful feedback and ensure a secure flow.
-4. **Domain Matching:** Ensure the `domain` parameter matches your application’s actual domain to prevent cross-origin attacks.
+Here's how the client-side verification is implemented in the demo:
 
-By integrating server-side SIWA verification, you create a secure and reliable authentication mechanism leveraging Algorand’s blockchain technology.
+```typescript
+const verifySIWAMessage = async () => {
+  if (!siwaMessageInstance || !signedMessage) {
+    setError(new Error("No signed message to verify"));
+    return;
+  }
+
+  setError(null);
+  try {
+    const siwaMessage = new SiwaMessage(
+      JSON.parse(credentials?.message || "{}")
+    );
+
+    const verifyParams = {
+      signature: credentials?.signature,
+      domain: typeof window !== "undefined" ? window.location.host : "",
+      provider: provider || null,
+      encodedTransaction: credentials?.encodedTransaction || null,
+    };
+
+    const result = await siwaMessage.verify(verifyParams);
+    setVerificationResult(result);
+
+    if (result.success) {
+      console.log("Signature verified successfully");
+      setActiveStep(3);
+    } else {
+      throw result.error || new Error("Error verifying SIWA signature");
+    }
+  } catch (error) {
+    console.error("Error verifying SIWA message:", error);
+    setError(error);
+  }
+};
+```
+
+This function performs the following steps:
+
+1. It checks if a SIWA message instance and a signed message exist.
+2. It creates a new `SiwaMessage` instance from the stored credentials.
+3. It prepares verification parameters, including the signature, domain, provider, and encoded transaction (if applicable).
+4. It calls the `verify` method on the SIWA message instance with these parameters.
+5. It updates the component state based on the verification result.
+
+Important notes about this client-side verification:
+
+1. **Demonstration Only**: This approach is used for demonstration purposes to show the full SIWA flow in a client-side application.
+2. **Not Secure for Production**: In a real-world application, this verification should be performed on the server to ensure the integrity and security of the authentication process.
+3. **Educational Value**: It allows developers to see how the verification process works without needing to set up a backend server.
+4. **Transparency**: Users can see the full details of the signing and verification process, including the message contents and verification results.
+
+When implementing SIWA in a production environment, always use server-side verification as described in the previous sections of this guide.

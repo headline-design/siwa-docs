@@ -1,175 +1,165 @@
 ---
 description: >-
-  This guide walks you through implementing the client-side logic to integrate
-  "Sign In With Algorand" (SIWA) into your application.
+  This section covers the client-side operations for Sign In with Algorand
+  (SIWA), including wallet initialization, connection, message signing, and
+  disconnection for multiple wallet providers.
 ---
 
 # Client-side operations
 
-### Initializing Pera Wallet
+### Initializing Wallet Connections
 
-The Pera Wallet SDK is required to enable wallet interactions. Start by importing and initializing the SDK:
+We use a custom hook `useWalletConnection` to manage wallet connections. This hook handles multiple wallet providers and abstracts the complexity of each wallet's specific implementation.
 
-```javascript
-import { PeraWalletConnect } from "@perawallet/connect";
+```typescript
+import { useWalletConnection, WalletProvider } from "@/hooks/useWalletConnection";
 
-const peraWallet = new PeraWalletConnect();
+// In your component
+const {
+  address,
+  provider,
+  isLoading,
+  connectWallet,
+  disconnectWallet,
+  signMessage,
+} = useWalletConnection();
 ```
 
-This initializes a new Pera Wallet connection instance for your application.
+### Connecting a Wallet
 
-***
+To connect a wallet, use the `connectWallet` function provided by the hook:
 
-### Connecting the Wallet
-
-Create a function to handle user interactions for connecting their wallet:
-
-```javascript
-const connectPeraWallet = async () => {
+```typescript
+const handleConnect = async (selectedProvider: WalletProvider) => {
   try {
-    const accounts = await peraWallet.connect();
-
-    // Listen for wallet disconnection
-    peraWallet.connector?.on("disconnect", () => {
-      console.log("Disconnected from Pera Wallet");
-    });
-
-    return accounts[0]; // Returns the connected wallet address
+    await connectWallet(selectedProvider);
+    console.log(`Connected to ${selectedProvider} wallet`);
   } catch (error) {
-    console.error("Error connecting to Pera Wallet:", error);
-    throw error;
+    console.error(`Error connecting to ${selectedProvider}:`, error);
   }
 };
 ```
 
-This function establishes a connection to the Pera Wallet and retrieves the user’s account address.
+### Signing a Message
 
-***
+To sign a message with the connected wallet, use the `signMessage` function:
 
-### Preparing a Message for Signing
+```typescript
+const handleSignMessage = async () => {
+  if (!address) {
+    console.error("No wallet connected");
+    return;
+  }
 
-Before signing a message, it must be properly formatted. Use helper functions for encoding and hashing the message:
-
-```javascript
-import { getMessageBytes, hashMessage } from "@/utils/siwaUtils";
-
-const prepareMessage = (message) => {
-  const hashedMessage = hashMessage(message);
-  return getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
+  const message = "Sign this message to authenticate.";
+  try {
+    const { signature, transaction } = await signMessage(message);
+    console.log("Signature:", signature);
+    if (transaction) {
+      console.log("Transaction:", transaction);
+    }
+  } catch (error) {
+    console.error("Error signing message:", error);
+  }
 };
 ```
 
-The `prepareMessage` function converts the message into a format compatible with Algorand’s signature verification.
+### Disconnecting a Wallet
 
-***
+To disconnect the current wallet, use the `disconnectWallet` function:
 
-### Signing the Message
-
-To request a signature from the user, implement the following:
-
-```javascript
-const signMessageWithPera = async (message, address) => {
-  const encodedMessage = prepareMessage(message);
-
-  const signatureArray = await peraWallet.signData(
-    [{ data: encodedMessage, message: "" }],
-    address
-  );
-
-  return signatureArray[0]; // Returns the signed message
-};
-```
-
-This function signs the prepared message using the connected wallet and returns the signature.
-
-***
-
-### Disconnecting the Wallet
-
-Implement a function to handle wallet disconnections:
-
-```javascript
-const disconnectPeraWallet = () => {
-  peraWallet.disconnect();
-  console.log("Pera Wallet disconnected");
-};
-```
-
-This ensures that the wallet session is closed properly.
-
-***
-
-### Managing Wallet Events
-
-Listen for wallet events to handle connection state changes:
-
-```javascript
-peraWallet.connector?.on("connect", (accounts) => {
-  console.log("Wallet connected:", accounts);
-});
-
-peraWallet.connector?.on("disconnect", () => {
+```typescript
+const handleDisconnect = () => {
+  disconnectWallet();
   console.log("Wallet disconnected");
-});
+};
 ```
 
-These event listeners keep the application state synchronized with the wallet’s connection state.
+### Wallet-Specific Considerations
 
-***
+#### Pera Wallet
+
+Pera Wallet uses direct message signing. No additional setup is required beyond the `useWalletConnection` hook.
+
+#### Defly Wallet
+
+Defly Wallet uses a transaction-based approach for signing. The hook handles creating a zero-amount payment transaction with the message in the note field.
+
+#### Kibisis Wallet
+
+Kibisis Wallet requires injection into the browser environment. The hook handles this process internally.
+
+#### Lute Wallet
+
+Lute Wallet also uses a transaction-based approach similar to Defly. The hook manages the connection and signing process.
 
 ### Full Example: Client-Side Workflow
 
-Below is a complete implementation of the client-side functionality:
+Here's a complete example of how to use the `useWalletConnection` hook in a React component:
 
-```javascript
-import { PeraWalletConnect } from "@perawallet/connect";
-import { getMessageBytes, hashMessage } from "@/utils/siwaUtils";
+```typescript
+import React from 'react';
+import { useWalletConnection, WalletProvider } from "@/hooks/useWalletConnection";
 
-const peraWallet = new PeraWalletConnect();
+const WalletComponent: React.FC = () => {
+  const {
+    address,
+    provider,
+    isLoading,
+    connectWallet,
+    disconnectWallet,
+    signMessage,
+  } = useWalletConnection();
 
-const connectPeraWallet = async () => {
-  try {
-    const accounts = await peraWallet.connect();
+  const handleConnect = async (selectedProvider: WalletProvider) => {
+    try {
+      await connectWallet(selectedProvider);
+      console.log(`Connected to ${selectedProvider} wallet`);
+    } catch (error) {
+      console.error(`Error connecting to ${selectedProvider}:`, error);
+    }
+  };
 
-    peraWallet.connector?.on("disconnect", () => {
-      console.log("Disconnected from Pera Wallet");
-    });
+  const handleSignMessage = async () => {
+    if (!address) {
+      console.error("No wallet connected");
+      return;
+    }
 
-    return accounts[0];
-  } catch (error) {
-    console.error("Error connecting to Pera Wallet:", error);
-    throw error;
-  }
-};
+    const message = "Sign this message to authenticate.";
+    try {
+      const { signature, transaction } = await signMessage(message);
+      console.log("Signature:", signature);
+      if (transaction) {
+        console.log("Transaction:", transaction);
+      }
+    } catch (error) {
+      console.error("Error signing message:", error);
+    }
+  };
 
-const prepareMessage = (message) => {
-  const hashedMessage = hashMessage(message);
-  return getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
-};
-
-const signMessageWithPera = async (message, address) => {
-  const encodedMessage = prepareMessage(message);
-
-  const signatureArray = await peraWallet.signData(
-    [{ data: encodedMessage, message: "" }],
-    address
+  return (
+    <div>
+      {!address ? (
+        <>
+          <button onClick={() => handleConnect("Pera")} disabled={isLoading}>Connect Pera Wallet</button>
+          <button onClick={() => handleConnect("Defly")} disabled={isLoading}>Connect Defly Wallet</button>
+          <button onClick={() => handleConnect("Kibisis")} disabled={isLoading}>Connect Kibisis Wallet</button>
+          <button onClick={() => handleConnect("Lute")} disabled={isLoading}>Connect Lute Wallet</button>
+        </>
+      ) : (
+        <>
+          <p>Connected Address: {address}</p>
+          <p>Wallet Provider: {provider}</p>
+          <button onClick={handleSignMessage}>Sign Message</button>
+          <button onClick={disconnectWallet}>Disconnect</button>
+        </>
+      )}
+    </div>
   );
-
-  return signatureArray[0];
 };
 
-const disconnectPeraWallet = () => {
-  peraWallet.disconnect();
-  console.log("Pera Wallet disconnected");
-};
-
-(async () => {
-  const address = await connectPeraWallet();
-  const message = "Sign this message to authenticate.";
-  const signature = await signMessageWithPera(message, address);
-  console.log("Signature:", signature);
-  disconnectPeraWallet();
-})();
+export default WalletComponent;
 ```
 
-With this implementation, the client can securely connect to the Pera Wallet, sign messages, and manage wallet connections. This completes the client-side integration for SIWA.
+This implementation provides a unified interface for connecting to different Algorand wallets, signing messages, and managing wallet connections. It abstracts away the complexities of each wallet's specific implementation, providing a consistent experience across different wallet providers.

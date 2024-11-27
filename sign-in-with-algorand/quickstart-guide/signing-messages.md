@@ -1,17 +1,18 @@
 ---
-description: Here we learn how to customize the SIWA Connect client
+description: >-
+  This guide explains how to sign SIWA (Sign-In with Algorand) messages using
+  different wallet providers: Pera, Defly, Kibisis, and Lute. Each wallet has
+  its own method for signing messages.
 ---
 
 # Message Signing
 
-Signing SIWA Messages
-
-**Pera Wallet**
+### Pera Wallet
 
 Pera Wallet supports signing arbitrary data directly:
 
 ```typescript
-const signMessageWithPera = async (message: string): Promise<Uint8Array> => {
+const signMessageWithPera = async (message: string, address: string): Promise<{ signature: Uint8Array; transaction: null }> => {
   const hashedMessage = hashMessage(message);
   const encodedHashedMessage = getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
 
@@ -19,21 +20,24 @@ const signMessageWithPera = async (message: string): Promise<Uint8Array> => {
     [{ data: encodedHashedMessage, message: "" }],
     address
   );
-  return peraSigArray[0];
+  return {
+    signature: peraSigArray[0],
+    transaction: null,
+  };
 };
 ```
 
-**Defly Wallet**
+### Defly Wallet
 
-Defly Wallet requires an alternative approach since it does not currently support signing arbitrary messages:
+Defly Wallet requires creating a transaction with the message in the note field:
 
 ```typescript
-const signMessageWithDefly = async (message: string): Promise<Uint8Array> => {
+const signMessageWithDefly = async (message: string, address: string): Promise<{ signature: Uint8Array; transaction: Uint8Array }> => {
   const hashedMessage = hashMessage(message);
   const encodedHashedMessage = getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
 
   const suggestedParams = await algodClient.getTransactionParams().do();
-  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+  const deflyTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     note: encodedHashedMessage,
     from: address,
     to: address,
@@ -41,30 +45,110 @@ const signMessageWithDefly = async (message: string): Promise<Uint8Array> => {
     suggestedParams,
   } as any);
 
-  const txnGroup = [{ txn, signerAddress: [address] }];
-  const deflySigArray = await deflyWallet.signTransaction([txnGroup]);
-  const decodedTxn = algosdk.decodeSignedTransaction(deflySigArray[0]);
-  return decodedTxn.sig as unknown as Uint8Array;
+  const deflyTxnGroup = [{ txn: deflyTxn, signerAddress: [address] }];
+  const deflySigArray = await deflyWallet.signTransaction([deflyTxnGroup]);
+  const decodedDeflyTxn = algosdk.decodeSignedTransaction(deflySigArray[0]);
+  return {
+    signature: decodedDeflyTxn.sig as unknown as Uint8Array,
+    transaction: deflySigArray[0],
+  };
 };
 ```
 
-#### Unified Signing Function
+### Kibisis Wallet
 
-Use the appropriate wallet-specific signing logic:
+Kibisis Wallet uses a browser-based approach for signing:
 
 ```typescript
-const signMessage = async (message: string): Promise<Uint8Array> => {
+const signMessageWithKibisis = async (message: string): Promise<{ signature: Uint8Array; transaction: null }> => {
+  if (typeof window === "undefined") {
+    throw new Error("Kibisis is only available in the browser");
+  }
+  const kibisisMessage = "MX" + JSON.stringify(message);
+  const kibisisResult = await window.algorand.signBytes({
+    data: new Uint8Array(Buffer.from(kibisisMessage)),
+  });
+
+  return {
+    signature: kibisisResult?.signature,
+    transaction: null,
+  };
+};
+```
+
+### Lute Wallet
+
+Lute Wallet, like Defly, uses a transaction-based approach:
+
+```typescript
+const signMessageWithLute = async (message: string, address: string): Promise<{ signature: Uint8Array; transaction: Uint8Array }> => {
+  const hashedMessage = hashMessage(message);
+  const encodedHashedMessage = getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
+
+  const suggestedParams = await algodClient.getTransactionParams().do();
+  const luteTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    note: encodedHashedMessage,
+    from: address,
+    to: address,
+    amount: 0,
+    suggestedParams,
+  });
+
+  const luteSigArray = await luteWallet!.signTxns([
+    { txn: Buffer.from(algosdk.encodeUnsignedTransaction(luteTxn)).toString("base64") },
+  ]);
+
+  const decodedLuteTxn = algosdk.decodeSignedTransaction(luteSigArray[0]);
+
+  return {
+    signature: decodedLuteTxn.sig as unknown as Uint8Array,
+    transaction: luteSigArray[0],
+  };
+};
+```
+
+### Unified Signing Function
+
+Here's a unified function that handles signing for all supported wallet providers:
+
+```typescript
+const signMessage = async (message: string): Promise<{ signature: Uint8Array; transaction?: any | null }> => {
   if (!address) {
     throw new Error("No address connected");
   }
 
+  const hashedMessage = hashMessage(message);
+  const encodedHashedMessage = getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
+
+  const suggestedParams = ["Defly", "Lute"].includes(provider)
+    ? await algodClient.getTransactionParams().do()
+    : null;
+
   switch (provider) {
-    case "PeraWallet":
-      return await signMessageWithPera(message);
+    case "Pera":
+      return await signMessageWithPera(message, address);
+
     case "Defly":
-      return await signMessageWithDefly(message);
+      if (!suggestedParams) {
+        throw new Error("Suggested params are not available");
+      }
+      return await signMessageWithDefly(message, address);
+
+    case "Kibisis":
+      return await signMessageWithKibisis(message);
+
+    case "Lute":
+      if (!suggestedParams) {
+        throw new Error("Suggested params are not available");
+      }
+      return await signMessageWithLute(message, address);
+
     default:
       throw new Error("Unsupported wallet provider");
   }
 };
 ```
+
+This unified `signMessage` function determines the correct signing method based on the current wallet provider. It handles the differences in signing approaches between the wallets, ensuring a consistent interface for your application.
+
+Remember to import and initialize the necessary wallet SDKs and utility functions (like `hashMessage`, `getMessageBytes`, and `algodClient`) before using these signing functions.
