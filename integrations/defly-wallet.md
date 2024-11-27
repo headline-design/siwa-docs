@@ -68,19 +68,19 @@ Defly Wallet currently does not support signing arbitrary data directly. Instead
 2.  Use a transaction as the signing mechanism:
 
     ```javascript
-    const signMessageWithDefly = async (message, algoAddress) => {
+    const signMessageWithDefly = async (message, address) => {
       const encodedMessage = prepareMessage(message);
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         note: encodedMessage,
-        from: algoAddress,
-        to: algoAddress,
+        from: address,
+        to: address,
         amount: 0,
         suggestedParams,
       } as any);
 
-      const txnGroup = [{ txn, signerAddress: [algoAddress] }];
+      const txnGroup = [{ txn, signerAddress: [address] }];
       const signedTxnArray = await deflyWallet.signTransaction([txnGroup]);
 
       const decodedTxn = algosdk.decodeSignedTransaction(signedTxnArray[0]);
@@ -129,19 +129,19 @@ const prepareMessage = (message) => {
   return getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
 };
 
-const signMessageWithDefly = async (message, algoAddress) => {
+const signMessageWithDefly = async (message, address) => {
   const encodedMessage = prepareMessage(message);
 
   const suggestedParams = await algodClient.getTransactionParams().do();
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     note: encodedMessage,
-    from: algoAddress,
-    to: algoAddress,
+    from: address,
+    to: address,
     amount: 0,
     suggestedParams,
   } as any);
 
-  const txnGroup = [{ txn, signerAddress: [algoAddress] }];
+  const txnGroup = [{ txn, signerAddress: [address] }];
   const signedTxnArray = await deflyWallet.signTransaction([txnGroup]);
 
   const decodedTxn = algosdk.decodeSignedTransaction(signedTxnArray[0]);
@@ -154,9 +154,9 @@ const disconnectDeflyWallet = () => {
 };
 
 (async () => {
-  const algoAddress = await connectDeflyWallet();
+  const address = await connectDeflyWallet();
   const message = "Sign this message to authenticate.";
-  const signature = await signMessageWithDefly(message, algoAddress);
+  const signature = await signMessageWithDefly(message, address);
   console.log("Signature:", signature);
   disconnectDeflyWallet();
 })();

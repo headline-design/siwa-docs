@@ -68,12 +68,12 @@ The `prepareMessage` function converts the message into a format compatible with
 To request a signature from the user, implement the following:
 
 ```javascript
-const signMessageWithPera = async (message, algoAddress) => {
+const signMessageWithPera = async (message, address) => {
   const encodedMessage = prepareMessage(message);
 
   const signatureArray = await peraWallet.signData(
     [{ data: encodedMessage, message: "" }],
-    algoAddress
+    address
   );
 
   return signatureArray[0]; // Returns the signed message
@@ -147,12 +147,12 @@ const prepareMessage = (message) => {
   return getMessageBytes(Buffer.from(hashedMessage).toString("utf8"));
 };
 
-const signMessageWithPera = async (message, algoAddress) => {
+const signMessageWithPera = async (message, address) => {
   const encodedMessage = prepareMessage(message);
 
   const signatureArray = await peraWallet.signData(
     [{ data: encodedMessage, message: "" }],
-    algoAddress
+    address
   );
 
   return signatureArray[0];
@@ -164,9 +164,9 @@ const disconnectPeraWallet = () => {
 };
 
 (async () => {
-  const algoAddress = await connectPeraWallet();
+  const address = await connectPeraWallet();
   const message = "Sign this message to authenticate.";
-  const signature = await signMessageWithPera(message, algoAddress);
+  const signature = await signMessageWithPera(message, address);
   console.log("Signature:", signature);
   disconnectPeraWallet();
 })();

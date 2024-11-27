@@ -12,7 +12,7 @@ The `SIWAConnect` component is a React component designed to manage the authenti
 
 * **Hooks:**
   * `useWalletConnection()`: Provides necessary functions and state variables for wallet connectivity, such as connecting/disconnecting wallets, loading states, and signing messages.
-  * `useSIWAAccount()`: Accepts `algoAddress` and returns account-related information, specifically the `address`.
+  * `useSIWAAccount()`: Accepts `address` and returns account-related information, specifically the `address`.
 *   **State Variables:**
 
     * **signedMessage**: Stores the message signed by the user.
@@ -39,7 +39,7 @@ import React, { useState, useEffect } from "react";
 import { SiwaMessage } from "@avmkit/siwa";
 import useSIWAAccount from "@/hooks/useSIWAAccount";
 import { useWalletConnection, WalletProvider } from "@/hooks/useWalletConnection";
-import { uint8ArrayToBase64, uint8ArrayToEthereumHexString } from "@/utils/siwaUtils";
+import { uint8ArrayToBase64 } from "@/utils/siwaUtils";
 // ... other imports
 ```
 
@@ -48,7 +48,7 @@ import { uint8ArrayToBase64, uint8ArrayToEthereumHexString } from "@/utils/siwaU
 ```typescript
 export default function SIWAConnect() {
   const {
-    algoAddress,
+    address,
     provider,
     isLoading,
     connectWallet,
@@ -65,7 +65,7 @@ export default function SIWAConnect() {
   const [siwaMessageInstance, setSiwaMessageInstance] = useState<SiwaMessage | null>(null);
   const [activeStep, setActiveStep] = useState(0);
 
-  const { address } = useSIWAAccount(algoAddress || "");
+  const { address } = useSIWAAccount(address || "");
 
   // ... rest of the component
 }

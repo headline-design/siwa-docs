@@ -36,8 +36,8 @@ const verifySIWAMessage = async () => {
       signature: credentials.signature,
       domain: window.location.host,
       address: address || undefined,
-      algoAddress: algoAddress || undefined,
-      algoSignature: credentials.algoSignature,
+      address: address || undefined,
+      signature: credentials.signature,
     };
 
     const result = await siwaMessage.verify(verifyParams);
@@ -100,7 +100,7 @@ import { SiwaMessage } from "@siwa/connect";
 const verifySIWAMessageOnServer = async (payload) => {
   try {
     // Extract message and credentials from the payload
-    const { message, signature, algoAddress, algoSignature } = payload;
+    const { message, signature, address, signature } = payload;
 
     // Initialize the SiwaMessage instance
     const siwaMessageInstance = new SiwaMessage(JSON.parse(message));
@@ -109,8 +109,7 @@ const verifySIWAMessageOnServer = async (payload) => {
     const verifyParams = {
       signature: signature,
       domain: "yourdomain.com", // Replace with your app's domain
-      algoAddress: algoAddress,
-      algoSignature: algoSignature,
+      address: address,
     };
 
     // Perform the verification

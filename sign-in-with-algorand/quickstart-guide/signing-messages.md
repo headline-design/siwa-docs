@@ -17,7 +17,7 @@ const signMessageWithPera = async (message: string): Promise<Uint8Array> => {
 
   const peraSigArray = await peraWallet.signData(
     [{ data: encodedHashedMessage, message: "" }],
-    algoAddress
+    address
   );
   return peraSigArray[0];
 };
@@ -35,13 +35,13 @@ const signMessageWithDefly = async (message: string): Promise<Uint8Array> => {
   const suggestedParams = await algodClient.getTransactionParams().do();
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     note: encodedHashedMessage,
-    from: algoAddress,
-    to: algoAddress,
+    from: address,
+    to: address,
     amount: 0,
     suggestedParams,
   } as any);
 
-  const txnGroup = [{ txn, signerAddress: [algoAddress] }];
+  const txnGroup = [{ txn, signerAddress: [address] }];
   const deflySigArray = await deflyWallet.signTransaction([txnGroup]);
   const decodedTxn = algosdk.decodeSignedTransaction(deflySigArray[0]);
   return decodedTxn.sig as unknown as Uint8Array;
@@ -54,7 +54,7 @@ Use the appropriate wallet-specific signing logic:
 
 ```typescript
 const signMessage = async (message: string): Promise<Uint8Array> => {
-  if (!algoAddress) {
+  if (!address) {
     throw new Error("No address connected");
   }
 

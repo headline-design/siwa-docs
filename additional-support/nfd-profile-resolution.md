@@ -122,8 +122,6 @@ Example integration in the SIWA verification process:
 ```typescript
 export const verifySignature = async (
   message: SiwaMessage,
-  algoSignatureBase64: string,
-  address: string,
   signature: string,
   nfd?: string,
 ): Promise<boolean> => {

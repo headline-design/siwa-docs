@@ -144,11 +144,11 @@ function Siwa() {
       
       // Here, you would use your Algorand wallet library to sign the message
       // For example, with Pera:
-      // const signMessageWithPera = async (message, algoAddress) => {
+      // const signMessageWithPera = async (message, address) => {
       // const encodedMessage = prepareMessage(message);
       // const signatureArray = await peraWallet.signData(
       // [{ data: encodedMessage, message: "" }],
-      // algoAddress );
+      // address );
       // return signatureArray[0]; // Returns the signature
       // };
 
