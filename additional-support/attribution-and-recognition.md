@@ -2,7 +2,7 @@
 
 ### Attribution
 
-"Sign In With Algorand" (SIWA) draws inspiration from and builds upon the foundational ideas established by other blockchain-based authentication protocols. These pioneering projects have shaped the evolution of decentralized authentication and informed the development of SIWA for the Algorand ecosystem.
+"Sign-In With Algorand" (SIWA) draws inspiration from and builds upon the foundational ideas established by other blockchain-based authentication protocols. These pioneering projects have shaped the evolution of decentralized authentication and informed the development of SIWA for the Algorand ecosystem.
 
 #### SIWE (Sign-In with Ethereum)
 
