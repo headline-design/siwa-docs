@@ -22,6 +22,7 @@
 
 * [SIWA Overview](general-information/siwa-overview/README.md)
   * [EIP-4361-COMPAT](general-information/siwa-overview/eip-4361-compat.md)
+  * [SIWA Diagram](general-information/siwa-overview/sign-in-diagram.md)
   * [Extended SIWA Diagram](general-information/siwa-overview/extended-siwa-diagram.md)
 * [SIWA Code of Conduct](general-information/siwa-code-of-conduct.md)
 
