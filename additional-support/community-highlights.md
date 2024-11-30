@@ -11,10 +11,10 @@ description: Community-Based Sign-In with Algorand Integrations and Guides
 
 ### SIWA Templates
 
-* [AlgoStack SSR](https://algostack-ssr.vercel.app)
-* [AlgoStack](https://algostack.vercel.app)
-* [AlgoStack EVM](https://algostack-evm.vercel.app)
-* [SIWA Connect](https://siwa-connect.vercel.app)
+* [AlgoStack SSR](https://algostack-ssr.siwa.org)
+* [AlgoStack](https://algostack.siwa.org)
+* [AlgoStack EVM](https://algostack-evm.siwa.org)
+* [SIWA Connect](https://siwa-connect.siwa.org)
 
 ### Additional Resources
 
